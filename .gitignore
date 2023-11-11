@@ -82,3 +82,5 @@ models/*.thneed
 build/
 
 !**/.gitkeep
+.env
+poetry.toml
