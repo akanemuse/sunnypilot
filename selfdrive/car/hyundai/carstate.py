@@ -362,7 +362,7 @@ class CarState(CarStateBase):
           ("CF_Lvr_CruiseSet", "LVR12", 0),
         ]
 
-      if CP.carFingerprint in FEATURES["use_fca"] and CP.sccBus == -1:
+      if CP.carFingerprint in FEATURES["use_fca"] and CP.sccBus != -1:
         signals += [
           ("FCA_CmdAct", "FCA11", 0),
           ("CF_VSM_Warn", "FCA11", 0),
