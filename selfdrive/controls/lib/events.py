@@ -531,8 +531,8 @@ EVENTS: Dict[int, Dict[str, Union[Alert, AlertCallbackType]]] = {
     ET.WARNING: Alert(
       "Smart/Adaptive Cruise Control is OFF",
       "Manual Gas/Brakes Required",
-      AlertStatus.normal, AlertSize.mid,
-      Priority.LOW, VisualAlert.none, AudibleAlert.none, 2.),
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.MID, VisualAlert.none, AudibleAlert.promptRepeat, 2.),
   },
 
   EventName.steerSaturated: {

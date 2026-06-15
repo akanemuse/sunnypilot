@@ -370,6 +370,14 @@ class CarInterface(CarInterfaceBase):
       if self.low_speed_alert:
         events.add(car.CarEvent.EventName.belowSteerSpeed)
 
+    # Non-SCC cars: manual cruise auto-disengages below ~30 km/h, so longitudinal
+    # (button-spoof) drops out while lateral (LFA) keeps running. Warn the driver to
+    # take over gas/brakes when this happens.
+    if self.CS.CP.sccBus == -1 and (self.CS.lfaEnabled or self.CS.accMainEnabled) and \
+       self.CS.out.cruiseState.enabled and not ret.cruiseState.enabled and \
+       ret.vEgo < 30 * CV.KPH_TO_MS:
+      events.add(EventName.manualLongitudinalRequired)
+
     self.CS.disengageByBrake = self.CS.disengageByBrake or ret.disengageByBrake
 
     enable_pressed = False
