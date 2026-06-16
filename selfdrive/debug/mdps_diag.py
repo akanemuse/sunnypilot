@@ -9,6 +9,7 @@
 #   python selfdrive/debug/mdps_diag.py --addr <IP_DEVICE>
 
 import argparse
+import time
 
 import cereal.messaging as messaging
 from common.realtime import sec_since_boot
@@ -41,13 +42,33 @@ def main(addr):
   unavail_seen = active_seen = flt_seen = False
   start = sec_since_boot()
   last_print = 0.
+  can_count = 0
 
   print("Membaca MDPS12 di bus 0 ... (Ctrl+C untuk berhenti)\n")
 
   while True:
-    can_strings = messaging.drain_sock_raw(logcan, wait_for_one=True)
-    cp.update_strings(can_strings)
+    # Jangan blokir selamanya: kalau belum ada CAN, tetap lanjut & tampilkan status.
+    can_strings = messaging.drain_sock_raw(logcan, wait_for_one=False)
+    if can_strings:
+      cp.update_strings(can_strings)
+      can_count += len(can_strings)
+    else:
+      time.sleep(0.01)  # hindari busy-loop saat belum ada data
     sm.update(0)
+
+    # Belum ada data CAN sama sekali → tampilkan panduan, jangan diam.
+    if can_count == 0:
+      if sec_since_boot() - last_print > 0.5:
+        dd = chr(27) + "[2J" + chr(27) + "[H"
+        dd += f"  Menunggu data CAN ...  ({sec_since_boot() - start:5.1f}s)\n\n"
+        dd += "  Belum ada pesan di socket 'can'. Pastikan:\n"
+        dd += "   - Device TERHUBUNG ke mobil (harness terpasang)\n"
+        dd += "   - Mobil ON / ignition nyala (mesin/ACC)\n"
+        dd += "   - openpilot berjalan (proses boardd aktif)\n\n"
+        dd += "  Skrip ini hanya bisa membaca MDPS saat CAN mengalir.\n"
+        print(dd)
+        last_print = sec_since_boot()
+      continue
 
     toi_unavail = cp.vl["MDPS12"]["CF_Mdps_ToiUnavail"]
     toi_active  = cp.vl["MDPS12"]["CF_Mdps_ToiActive"]
@@ -70,6 +91,7 @@ def main(addr):
     if sec_since_boot() - last_print > 0.2:
       dd = chr(27) + "[2J" + chr(27) + "[H"  # clear + home
       dd += f"  t={sec_since_boot() - start:6.1f}s   kecepatan={v_kph:5.1f} km/h\n"
+      dd += f"  CAN msgs: {can_count}   MDPS12 valid: {yn(cp.can_valid)}\n"
       dd += "  " + "-" * 46 + "\n"
       dd += f"  MDPS ToiUnavail : {yn(toi_unavail)}   (pernah nyala: {yn(unavail_seen)})\n"
       dd += f"  MDPS ToiActive  : {yn(toi_active)}   (pernah nyala: {yn(active_seen)})\n"
